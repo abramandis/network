@@ -15,19 +15,14 @@ document.addEventListener('DOMContentLoaded', function() {
     menuItems.forEach(function(item) {
         item.addEventListener('click', function(event) {
             // Prevent the default action of the link
-            event.preventDefault();
+            //event.preventDefault();
             console.log('Clicked on menu item')
 
             // Get the target DIV to hide/unhide
             const targetDivId = item.dataset.target;
             const targetDiv = document.getElementById(targetDivId);
 
-            // Toggle the visibility of the target DIV
-            if (targetDiv.style.display === 'none') {
-                targetDiv.style.display = 'block';
-            } else {
-                targetDiv.style.display = 'none';
-            }
+            
         });
     });
 });

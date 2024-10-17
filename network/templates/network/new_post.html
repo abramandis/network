@@ -1,0 +1,14 @@
+{% extends "network/layout.html" %}
+
+{% block body %}
+{% load static %}
+<script src="{% static 'network/new_post.js' %}"></script>
+    <div class="new-post x-page" style="padding: 10px;">
+        <h1>New Post</h1>
+        <form action="{% url 'create_post' %}" method="post" style="display: flex; flex-direction: column; gap: 10px;">
+            {% csrf_token %}
+            <textarea name="content" placeholder="Content" style="padding: 10px; border-radius: 10px; border: 1px solid black;"></textarea>
+            <button type="submit" style="padding: 10px; border-radius: 10px; border: 1px solid black;">Post</button>
+        </form>
+    </div>
+{% endblock %}

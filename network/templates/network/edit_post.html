@@ -1,0 +1,14 @@
+{% extends "network/layout.html" %}
+
+{% block body %}
+{% load static %}
+<script src="{% static 'network/edit_post.js' %}"></script>
+    <div class="new-post x-page" style="padding: 10px;">
+        <h1>Edit Post</h1>
+        <form action="{% url 'edit_post' post.id %}" method="post" style="display: flex; flex-direction: column; gap: 10px;">
+            {% csrf_token %}
+            <textarea name="content" placeholder="Content" style="padding: 10px; border-radius: 10px; border: 1px solid black;">{{ post.content }}</textarea>
+            <button type="submit" style="padding: 10px; border-radius: 10px; border: 1px solid black;">Edit Post</button>
+        </form>
+    </div>
+{% endblock %}

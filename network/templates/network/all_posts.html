@@ -1,0 +1,143 @@
+{% extends "network/layout.html" %}
+
+
+{% load static %}
+{% block body %}
+
+    <style>
+      .like-button {
+          background-color: red;
+          border: none; 
+          cursor: pointer;
+          background-image: url('/static/network/heart_icon.png');
+          background-size: contain;
+          background-repeat: no-repeat;
+          background-position: center;
+          width: 20px; height: 20px;
+      }
+
+      .like-button:hover {
+          transform: scale(1.1);
+      }
+
+      .like-button:active {
+          background-color: red;
+          border: none; 
+          transform: scale(0.9);
+      }
+    </style>
+
+
+
+    <script src="{% static 'network/all_posts.js' %}"></script>
+    <link href="{% static 'network/styles.css' %}" rel="stylesheet"></link> 
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const likeButtons = document.querySelectorAll('.like-button');
+
+        likeButtons.forEach(button => {
+            button.addEventListener('click', function(event) {
+                event.preventDefault(); // Prevent the default form submission
+
+                const postId = this.getAttribute('data-post-id');
+                const url = `/like/${postId}`;
+
+                fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}', // Include CSRF token
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ post_id: postId })
+                    })
+                .then(response => {
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Update the like count on the page
+                        const likeCount = document.getElementById(`like-count-${postId}`);
+                        likeCount.textContent = data.new_like_count; // Assuming the response contains the new like count
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        });
+      });
+    </script>
+
+<div class="all-posts x-page" style="padding: 10px;">
+  <h1>All Posts</h1>
+  <div class="posts">
+      {% for post in posts %}
+          <div class="post" style="border: 1px solid black; padding: 10px; margin: 10px; border-radius: 10px;">
+              <p><strong>{{ post.user.username.capitalize }}</strong></p>
+              {% if post.user == request.user %}
+                <button class="edit-button" data-post-id="{{ post.id }}">Edit</button>
+              {% endif %}
+              <p class="post-content-{{ post.id }}">{{ post.content }}</p>
+              <textarea class="edit-textarea-{{ post.id }}" style="display:none;">{{ post.content }}</textarea>
+              <button class="save-button-{{ post.id }}" style="display:none;" data-post-id="{{ post.id }}">Save</button>
+              
+              <span style="font-size: 16px; color: gray;">{{ post.timestamp }}
+              <br><button type="submit" class="like-button" data-post-id="{{ post.id }}"></button><span id="like-count-{{ post.id }}"> {{ post.likes.count }}</span>
+              </span>
+          </div>
+      {% endfor %}
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const editButtons = document.querySelectorAll('.edit-button');
+  
+  editButtons.forEach(button => {
+      button.addEventListener('click', function() {
+          const postId = this.getAttribute('data-post-id');
+          const postContent = document.querySelector(`.post-content-${postId}`);
+          const textarea = document.querySelector(`.edit-textarea-${postId}`);
+          const saveButton = document.querySelector(`.save-button-${postId}`);
+
+          // Show textarea and populate it with current content
+          postContent.style.display = 'none';
+          textarea.style.display = 'block';
+          textarea.value = postContent.textContent;
+          saveButton.style.display = 'block';
+      });
+  });
+
+  const saveButtons = document.querySelectorAll('[class^="save-button"]'); // Select all buttons starting with 'save-button'
+  
+  saveButtons.forEach(button => {
+      button.addEventListener('click', function() {
+          const postId = this.getAttribute('data-post-id');
+          const textarea = document.querySelector(`.edit-textarea-${postId}`);
+          const newContent = textarea.value;
+
+          // Send updated content to the server
+          fetch(`/edit/${postId}`, {
+              method: 'POST',
+              headers: {
+                  'X-CSRFToken': '{{ csrf_token }}',
+                  'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ content: newContent })
+          })
+          .then(response => response.json())
+          .then(data => {
+              if (data.success) {
+                  // Update the post content on the page
+                  const postContent = document.querySelector(`.post-content-${postId}`);
+                  postContent.textContent = newContent;
+                  postContent.style.display = 'block';
+                  textarea.style.display = 'none';
+                  this.style.display = 'none'; // Hide save button
+              }
+          })
+          .catch(error => console.error('Error:', error));
+      });
+  });
+});
+</script>
+{% endblock %}

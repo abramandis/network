@@ -1,0 +1,24 @@
+div {
+  background-color: red;
+}
+
+.like-button {
+    background-color: red;
+    border: 1px solid blue;
+    cursor: pointer;
+    background-image: url('/static/network/heart_icon.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    width: 20px;
+    height: 20px;
+}
+
+.like-button:hover {
+    transform: scale(1.1);
+}
+
+.like-button:active {
+    transform: scale(0.9);
+}
+
