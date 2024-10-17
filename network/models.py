@@ -1,6 +1,9 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+class User(AbstractUser):
+    followers = models.ManyToManyField("User", blank=True, related_name="following")
+
 class Post(models.Model):
     user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="posts")
     content = models.TextField()
@@ -21,22 +24,20 @@ class Post(models.Model):
     
 class Profile(models.Model):
     user = models.OneToOneField("User", on_delete=models.CASCADE, related_name="profile")
-    followers = models.ManyToManyField("User", blank=True, related_name="following")
     
     def __str__(self):
-        return f"{self.user} has {self.followers.count()} followers"
+        return f"{self.user} has {self.user.followers.count()} followers"
     
     def serialize(self):
         return {
             "user": self.user.username,
-            "followers": self.followers.count()
+            "followers": self.user.followers.count()
         }
     
     def following(self):
-        return self.followers.count()
+        return self.user.following.count()
     
     def followers(self):
-        return self.followers.count()
+        return self.user.followers.count()
 
-class User(AbstractUser):
-    pass
+

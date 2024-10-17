@@ -6,11 +6,15 @@ from django.urls import reverse
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 import json
-from .models import User, Post
+from .models import User, Post, Profile
 
-
+# Not used
 def index(request):
     return render(request, "network/index.html")
+
+# Currently doesn't work 
+def custom_404(request, exception):
+    return render(request, 'network/404.html', status=404)
 
 def new_post(request):
     if request.method == "POST":
@@ -19,7 +23,8 @@ def new_post(request):
         if content:
             post = Post(user=request.user, content=content)
             post.save()
-            return JsonResponse({"message": "Post created successfully."}, status=201)
+            allPosts = Post.objects.all().order_by('-timestamp')
+            return render(request, "network/all_posts.html", {"posts": allPosts})
         else:
             return JsonResponse({"error": "Content is required."}, status=400)
     else:
@@ -28,8 +33,11 @@ def new_post(request):
 
 def all_posts(request):
     if request.method == "GET":
-        posts = Post.objects.all()
-        return render(request, "network/all_posts.html", {"posts": posts})
+        posts = Post.objects.all().order_by('-timestamp')
+        paginator = Paginator(posts, 10)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        return render(request, "network/all_posts.html", {"posts": page_obj})
     else:
         return JsonResponse({"error": "Invalid request."}, status=400)
 
@@ -73,19 +81,38 @@ def unlike_post(request, post_id):
     pass
 
 def following_posts(request):
-    pass
+    if request.method == "GET":
+        posts = Post.objects.filter(user__in=request.user.following.all()).order_by('-timestamp')
+        paginator = Paginator(posts, 10)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        return render(request, "network/following.html", {"posts": page_obj})
+    else:
+        return JsonResponse({"error": "Invalid request."}, status=400)
 
 def following(request):
     pass
 
 def follow(request, username):
-    pass
+    user_to_follow = User.objects.get(username=username)
+    user_to_follow.followers.add(request.user)
+    new_follower_count = user_to_follow.followers.count()
+    return JsonResponse({"message": "User followed successfully.", "success": True, "new_follower_count": new_follower_count}, status=201)
 
 def unfollow(request, username):
-    pass
+    user_to_unfollow = User.objects.get(username=username)
+    user_to_unfollow.followers.remove(request.user)
+    new_follower_count = user_to_unfollow.followers.count()
+    return JsonResponse({"message": "User unfollowed successfully.", "success": True, "new_follower_count": new_follower_count}, status=201)
 
 def profile(request, username):
-    pass
+    if request.method == "GET":
+        profile_user = User.objects.get(username=username)
+        posts = Post.objects.filter(user=profile_user)
+        is_following = request.user in profile_user.followers.all()
+        return render(request, "network/profile.html", {"profile_user": profile_user, "posts": posts, "is_following": is_following})
+    else:
+        return JsonResponse({"error": "Invalid request."}, status=400)
 
 def followers(request, username):
     pass
@@ -101,7 +128,7 @@ def login_view(request):
         # Check if authentication successful
         if user is not None:
             login(request, user)
-            return HttpResponseRedirect(reverse("index"))
+            return HttpResponseRedirect(reverse("all_posts"))
         else:
             return render(request, "network/login.html", {
                 "message": "Invalid username and/or password."
@@ -112,7 +139,7 @@ def login_view(request):
 
 def logout_view(request):
     logout(request)
-    return HttpResponseRedirect(reverse("index"))
+    return HttpResponseRedirect(reverse("all_posts"))
 
 
 def register(request):
@@ -137,6 +164,6 @@ def register(request):
                 "message": "Username already taken."
             })
         login(request, user)
-        return HttpResponseRedirect(reverse("index"))
+        return HttpResponseRedirect(reverse("all_posts"))
     else:
         return render(request, "network/register.html")

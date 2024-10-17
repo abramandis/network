@@ -4,6 +4,7 @@
 
 <style>
   .like-button {
+      background-color: red;
       border: none; 
       cursor: pointer;
       background-image: url('/static/network/heart_icon.png');
@@ -22,41 +23,38 @@
       border: none; 
       transform: scale(0.9);
   }
-</style> 
+</style>
 
-<div class="all-posts x-page" style="padding: 10px;">
-  <h1>All Posts</h1>
-  <div class="posts">
-    {% for post in posts %}
-        <div class="post" style="border: 1px solid black; padding: 10px; margin: 10px; border-radius: 10px;">
-            <p><strong><a href="{% url 'profile' post.user.username %}">{{ post.user.username.capitalize }}</a></strong></p>
-            {% if post.user == request.user %}
-                <button class="edit-button" data-post-id="{{ post.id }}">Edit</button>
-            {% endif %}
-            <p class="post-content-{{ post.id }}">{{ post.content }}</p>
-            <textarea class="edit-textarea-{{ post.id }}" style="display:none;">{{ post.content }}</textarea>
-            <button class="save-button-{{ post.id }}" style="display:none;" data-post-id="{{ post.id }}">Save</button>
-            
-            <span style="font-size: 16px; color: gray;">{{ post.timestamp }}
-            <br><button type="submit" class="like-button" data-post-id="{{ post.id }}"></button><span id="like-count-{{ post.id }}"> {{ post.likes.count }}</span>
-            </span>
-        </div>
-    {% endfor %}
+<div class="profile-page" style="padding: 20px; display: flex; flex-direction: column; align-items: left;">
+  <div class="profile-info" style="display: flex; flex-direction: column; align-items: left;">
+    <h1>Username: {{ profile_user.username.capitalize }}</h1>
+    <p style="font-size: 20px;"><strong>Followers:</strong><span id="follower-count">{{ profile_user.followers.count }}</span></p>
+    <p style="font-size: 20px;"><strong>Following:</strong> {{ profile_user.following.count }}</p>
   </div>
+    {% if profile_user.username != user.username and user.is_authenticated %}
+      <button class="follow-button" data-username="{{ profile_user.username }}" id="follow-button">
+        {% if is_following %}Unfollow{% else %}Follow{% endif %}</button>
+    {% endif %}
 
-  <!-- Pagination -->
-  <div class="pagination">
-      {% if posts.has_previous %}
-          <a style="margin: 10px;" href="?page=1">First</a>
-          <a style="margin: 10px;" href="?page={{ posts.previous_page_number }}">Previous</a>
-      {% endif %}
-
-      <span style="margin: 10px;">Page {{ posts.number }} of {{ posts.paginator.num_pages }}</span>
-
-      {% if posts.has_next %}
-          <a style="margin: 10px;" href="?page={{ posts.next_page_number }}">Next</a>
-          <a style="margin: 10px;" href="?page={{ posts.paginator.num_pages }}">Last</a>
-      {% endif %}
+  <div class="profile-posts x-page">
+    <h1>Posts by {{ profile_user.username.capitalize }}</h1>
+    <div class="posts">
+        {% for post in posts|dictsortreversed:"timestamp" %}
+            <div class="post" style="border: 1px solid black; padding: 10px; margin: 10px; border-radius: 10px;">
+                <p><strong>{{ post.user.username.capitalize }}</strong></p>
+                {% if post.user == request.user %}
+                  <button class="edit-button" data-post-id="{{ post.id }}">Edit</button>
+                {% endif %}
+                <p class="post-content-{{ post.id }}">{{ post.content }}</p>
+                <textarea class="edit-textarea-{{ post.id }}" style="display:none;">{{ post.content }}</textarea>
+                <button class="save-button-{{ post.id }}" style="display:none;" data-post-id="{{ post.id }}">Save</button>
+                
+                <span style="font-size: 16px; color: gray;">{{ post.timestamp }}
+                <br><button type="submit" class="like-button" data-post-id="{{ post.id }}"></button><span id="like-count-{{ post.id }}"> {{ post.likes.count }}</span>
+                </span>
+            </div>
+        {% endfor %}
+    </div>
   </div>
 </div>
 
@@ -84,9 +82,9 @@
             })
             .then(data => {
                 if (data.success) {
-                    // Update LIKES 
+                    // Update the like count on the page
                     const likeCount = document.getElementById(`like-count-${postId}`);
-                    likeCount.textContent = data.new_like_count;
+                    likeCount.textContent = data.new_like_count; // Assuming the response contains the new like count
                 }
             })
             .catch(error => console.error('Error:', error));
@@ -146,5 +144,38 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   });
 });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const followButtons = document.querySelectorAll('.follow-button');
+    console.log("Follow Button Clicked");
+
+    followButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const username = this.getAttribute('data-username');
+            const url = this.textContent.trim() === 'Follow' ? `/follow/${username}` : `/unfollow/${username}`;
+            const followerCountElement = document.getElementById(`follower-count`);
+            let currentCount = parseInt(followerCountElement.textContent);
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.textContent = this.textContent.trim() === 'Follow' ? 'Unfollow' : 'Follow';
+                    currentCount = data.new_follower_count;
+                    followerCountElement.textContent = currentCount;
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    });
+  });
 </script>
 {% endblock %}
